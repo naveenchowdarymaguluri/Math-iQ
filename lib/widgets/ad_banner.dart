@@ -25,11 +25,16 @@ class AdBanner extends StatefulWidget {
 class _AdBannerState extends State<AdBanner> {
   BannerAd? _ad;
   bool _loaded = false;
+  bool _failed = false;
 
   @override
   void initState() {
     super.initState();
-    if (AdService.instance.adsEnabled) _loadAd();
+    if (AdService.instance.adsEnabled) {
+      _loadAd();
+    } else {
+      _failed = true;
+    }
   }
 
   void _loadAd() {
@@ -40,7 +45,10 @@ class _AdBannerState extends State<AdBanner> {
       listener: BannerAdListener(
         onAdLoaded: (_) {
           if (!mounted) return;
-          setState(() => _loaded = true);
+          setState(() {
+            _loaded = true;
+            _failed = false;
+          });
           AdService.instance.recordBannerImpression(
             _toPlacement(widget.placement),
           );
@@ -50,7 +58,13 @@ class _AdBannerState extends State<AdBanner> {
             debugPrint('[AdBanner] ${widget.placement}: $err');
           }
           ad.dispose();
-          _ad = null;
+          if (mounted) {
+            setState(() {
+              _ad = null;
+              _loaded = false;
+              _failed = true;
+            });
+          }
         },
       ),
     )..load();
@@ -83,8 +97,8 @@ class _AdBannerState extends State<AdBanner> {
 
   @override
   Widget build(BuildContext context) {
-    // Pro subscribers see no ads
-    if (!AdService.instance.adsEnabled) return const SizedBox.shrink();
+    // Pro subscribers or failed ads see no empty space
+    if (!AdService.instance.adsEnabled || _failed) return const SizedBox.shrink();
 
     if (!_loaded || _ad == null) {
       // Placeholder keeps layout stable while ad loads

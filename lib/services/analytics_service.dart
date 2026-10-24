@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
@@ -10,16 +12,21 @@ class AnalyticsService {
   static final AnalyticsService instance = AnalyticsService._();
   AnalyticsService._();
 
-  final FirebaseAnalytics _fa = FirebaseAnalytics.instance;
-  final FirebaseCrashlytics _fc = FirebaseCrashlytics.instance;
+  FirebaseAnalytics get _fa => FirebaseAnalytics.instance;
+  FirebaseCrashlytics get _fc => FirebaseCrashlytics.instance;
 
   /// Attach to [MaterialApp.navigatorObservers] for automatic screen tracking.
-  FirebaseAnalyticsObserver get observer =>
-      FirebaseAnalyticsObserver(analytics: _fa);
+  NavigatorObserver get observer => Firebase.apps.isNotEmpty
+      ? FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance)
+      : NavigatorObserver();
 
   // ─── Internal safe runner ──────────────────────────────────────────────────
-  void _run(Future<void> Function() fn) =>
+  void _run(Future<void> Function() fn) {
+    try {
+      if (Firebase.apps.isEmpty) return;
       fn().catchError((_) {}); // fire-and-forget; swallow all errors
+    } catch (_) {}
+  }
 
   // ─── XP bucket helper ─────────────────────────────────────────────────────
   static String _xpBucket(int xp) {

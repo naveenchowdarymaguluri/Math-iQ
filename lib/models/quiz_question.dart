@@ -116,9 +116,19 @@ class QuizQuestion {
 
   static List<int> _generateOptions(int correct, _SimpleRandom rand) {
     final opts = <int>{correct};
-    while (opts.length < 4) {
+    int attempts = 0;
+    while (opts.length < 4 && attempts < 50) {
+      attempts++;
       final offset = rand.nextInt(20) - 10;
-      if (offset != 0) opts.add(correct + offset);
+      final val = correct + offset;
+      if (offset != 0 && (correct < 0 || val >= 0)) {
+        opts.add(val);
+      }
+    }
+    int fallback = 1;
+    while (opts.length < 4) {
+      opts.add(correct + fallback);
+      fallback++;
     }
     final list = opts.toList()..shuffle();
     return list;

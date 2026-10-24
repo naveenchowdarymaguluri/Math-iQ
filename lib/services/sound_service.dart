@@ -62,6 +62,8 @@ class SoundService {
     }
   }
 
+  final AudioPlayer _player = AudioPlayer();
+
   // ─── Playback ──────────────────────────────────────────────────────────────
   Future<void> play(SoundType type) async {
     if (!_sfxOn) return;
@@ -74,10 +76,13 @@ class SoundService {
         SoundType.gameOver => _gameOver,
         SoundType.button => _button,
       };
-      final player = AudioPlayer();
-      await player.setReleaseMode(ReleaseMode.release);
-      await player.play(BytesSource(bytes));
+      await _player.stop();
+      await _player.play(BytesSource(bytes));
     } catch (_) {}
+  }
+
+  void dispose() {
+    _player.dispose();
   }
 
   // ─── WAV generation ────────────────────────────────────────────────────────
