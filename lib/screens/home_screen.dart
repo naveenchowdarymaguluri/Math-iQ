@@ -16,6 +16,7 @@ import 'achievements_screen.dart';
 import 'level_select_screen.dart';
 import 'records_screen.dart';
 import 'challenge_screen.dart';
+import 'trivia_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -63,6 +64,10 @@ class HomeScreen extends StatelessWidget {
 
                           // ── Survival mode banner ──────────────────
                           _SurvivalBanner(),
+                          const SizedBox(height: 20),
+
+                          // ── OpenTDB Trivia banner ──────────────────
+                          _TriviaBanner(),
                           const SizedBox(height: 24),
 
                           // ── Invite friends ───────────────────────
@@ -324,7 +329,20 @@ class _QuickPlayRow extends StatelessWidget {
                     builder: (_) => const PracticeSetupScreen())),
           ),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _QuickBtn(
+            label: 'Trivia',
+            emoji: '💡',
+            color: const Color(0xFF6C5CE7),
+            shadowColor: const Color(0xFF4834D4),
+            onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const TriviaScreen())),
+          ),
+        ),
+        const SizedBox(width: 10),
         Expanded(
           child: _QuickBtn(
             label: 'Flags',
@@ -337,7 +355,7 @@ class _QuickPlayRow extends StatelessWidget {
                     builder: (_) => const FlagQuizScreen())),
           ),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 10),
         Expanded(
           child: _QuickBtn(
             label: 'Quests',
@@ -810,6 +828,113 @@ class _SurvivalBannerState extends State<_SurvivalBanner> {
                       ),
                     ),
                   ],
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: Colors.white60, size: 26),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── OpenTDB Trivia banner ──────────────────────────────────────────────────
+class _TriviaBanner extends StatefulWidget {
+  @override
+  State<_TriviaBanner> createState() => _TriviaBannerState();
+}
+
+class _TriviaBannerState extends State<_TriviaBanner> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const TriviaScreen()),
+        );
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 80),
+        transform: _pressed
+            ? Matrix4.translationValues(0, 6, 0)
+            : Matrix4.identity(),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF6C5CE7),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: _pressed
+              ? []
+              : const [
+                  BoxShadow(
+                    color: Color(0xFF4834D4),
+                    offset: Offset(0, 6),
+                    blurRadius: 0,
+                  ),
+                ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Center(
+                child: Text('💡', style: TextStyle(fontSize: 30)),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Science & Math Trivia',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: const Text(
+                          'OpenTDB',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Real-time trivia quizzes with global questions',
+                    style: GoogleFonts.beVietnamPro(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.85),
+                    ),
+                  ),
                 ],
               ),
             ),

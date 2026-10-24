@@ -3,6 +3,8 @@ import 'package:mathiq/main.dart';
 import 'package:mathiq/models/quiz_question.dart';
 import 'package:mathiq/models/challenge_level.dart';
 import 'package:mathiq/services/level_service.dart';
+import 'package:mathiq/models/trivia_question.dart';
+import 'package:mathiq/services/trivia_service.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -55,5 +57,35 @@ void main() {
     // Reset
     await svc.resetAll();
     expect(svc.grandTotalStars, 0);
+  });
+
+  test('TriviaQuestion decodes OpenTDB base64 JSON properly', () {
+    // base64 for "What is 2 + 2?", "4", and ["3", "5", "6"]
+    final json = {
+      'category': 'U2NpZW5jZTogTWF0aGVtYXRpY3M=',
+      'type': 'bXVsdGlwbGU=',
+      'difficulty': 'ZWFzeQ==',
+      'question': 'V2hhdCBpcyAyICsgMj8=',
+      'correct_answer': 'NA==',
+      'incorrect_answers': ['Mw==', 'NQ==', 'Ng=='],
+    };
+
+    final q = TriviaQuestion.fromBase64Json(json);
+    expect(q.category, 'Science: Mathematics');
+    expect(q.type, 'multiple');
+    expect(q.difficulty, 'easy');
+    expect(q.question, 'What is 2 + 2?');
+    expect(q.correctAnswer, '4');
+    expect(q.options.length, 4);
+    expect(q.options.contains('4'), isTrue);
+  });
+
+  test('TriviaService returns fallback questions if offline or API unavailable', () async {
+    final questions = await TriviaService.instance.fetchQuestions(
+      amount: 5,
+      categoryId: 19,
+    );
+    expect(questions.isNotEmpty, isTrue);
+    expect(questions.first.options.length, 4);
   });
 }

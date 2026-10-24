@@ -6,6 +6,7 @@ import '../widgets/math_progress_bar.dart';
 import '../screens/practice_setup_screen.dart';
 import '../screens/flag_quiz_screen.dart';
 import '../screens/challenge_screen.dart';
+import '../screens/trivia_screen.dart';
 
 // ─── Public helpers ───────────────────────────────────────────────────────────
 
@@ -96,6 +97,13 @@ class _AppMenuSheet extends StatelessWidget {
             sub: 'Guess 10 country flags',
             color: const Color(0xFF2EC4B6),
             onTap: () => _go(context, const FlagQuizScreen()),
+          ),
+          _MenuTile(
+            emoji: '💡',
+            title: 'Trivia Quiz',
+            sub: 'OpenTDB Math & Science trivia',
+            color: const Color(0xFF6C5CE7),
+            onTap: () => _go(context, const TriviaScreen()),
           ),
           _MenuTile(
             emoji: '⚡',

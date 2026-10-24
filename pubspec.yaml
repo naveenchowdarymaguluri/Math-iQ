@@ -52,6 +52,7 @@ dependencies:
 
   # ── Biometric auth (parental controls) ───────────────────────────────────
   local_auth: ^2.3.0
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
