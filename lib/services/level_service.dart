@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/challenge_level.dart';
@@ -13,6 +14,7 @@ class LevelService extends ChangeNotifier {
   static final instance = LevelService._();
   LevelService._();
 
+  static const String _kStorageKey = 'level_progress_v2';
   final Map<String, LevelProgress> _progress = {};
 
   static String _key(ChallengeMode mode, int level) =>
@@ -21,6 +23,25 @@ class LevelService extends ChangeNotifier {
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     _progress.clear();
+
+    // Fast-path: single batch read from serialized storage
+    final jsonStr = prefs.getString(_kStorageKey);
+    if (jsonStr != null) {
+      try {
+        final Map<String, dynamic> decoded = jsonDecode(jsonStr);
+        for (final entry in decoded.entries) {
+          final list = entry.value as List<dynamic>;
+          _progress[entry.key] = LevelProgress(
+            stars: (list[0] as num).toInt(),
+            bestCorrect: (list[1] as num).toInt(),
+          );
+        }
+        return;
+      } catch (_) {}
+    }
+
+    // Migration fallback: check legacy individual keys (runs once per install)
+    bool hasLegacy = false;
     for (final mode in ChallengeMode.values) {
       for (int level = 1; level <= 100; level++) {
         final k = _key(mode, level);
@@ -28,9 +49,21 @@ class LevelService extends ChangeNotifier {
         final best = prefs.getInt('${k}_b') ?? 0;
         if (stars > 0 || best > 0) {
           _progress[k] = LevelProgress(stars: stars, bestCorrect: best);
+          hasLegacy = true;
         }
       }
     }
+
+    if (hasLegacy) {
+      await _persist(prefs);
+    }
+  }
+
+  Future<void> _persist(SharedPreferences prefs) async {
+    final data = _progress.map(
+      (k, v) => MapEntry(k, [v.stars, v.bestCorrect]),
+    );
+    await prefs.setString(_kStorageKey, jsonEncode(data));
   }
 
   LevelProgress? progressFor(ChallengeMode mode, int level) =>
@@ -95,19 +128,19 @@ class LevelService extends ChangeNotifier {
     _progress[k] = LevelProgress(stars: bestStars, bestCorrect: bestCorrect);
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('${k}_s', bestStars);
-    await prefs.setInt('${k}_b', bestCorrect);
+    await _persist(prefs);
     notifyListeners();
   }
 
   Future<void> resetAll() async {
     _progress.clear();
     final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kStorageKey);
     for (final mode in ChallengeMode.values) {
       for (int level = 1; level <= 100; level++) {
         final k = _key(mode, level);
-        await prefs.remove('${k}_s');
-        await prefs.remove('${k}_b');
+        prefs.remove('${k}_s');
+        prefs.remove('${k}_b');
       }
     }
     notifyListeners();

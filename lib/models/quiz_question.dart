@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 enum Operation { addition, subtraction, multiplication, division }
 
 enum Difficulty { easy, medium, hard }
@@ -136,11 +138,10 @@ class QuizQuestion {
 }
 
 class _SimpleRandom {
-  int _seed = DateTime.now().millisecondsSinceEpoch;
+  final math.Random _rand = math.Random();
 
   int nextInt(int max) {
     if (max <= 0) return 0;
-    _seed = (_seed * 1664525 + 1013904223) & 0xFFFFFFFF;
-    return (_seed % max).abs();
+    return _rand.nextInt(max);
   }
 }

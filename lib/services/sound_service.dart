@@ -23,8 +23,11 @@ class SoundService {
   late final Uint8List _gameOver;
   late final Uint8List _button;
 
+  bool _initialized = false;
+
   // ─── Init ──────────────────────────────────────────────────────────────────
   void init() {
+    if (_initialized) return;
     try {
       // Ascending ding-ding: E5 → A5
       _correct = _makeWav([
@@ -57,6 +60,7 @@ class SoundService {
       _button = _makeWav([
         (freq: 523, ms: 45, amp: 0.45),
       ]);
+      _initialized = true;
     } catch (_) {
       // Silently ignore — sounds are non-critical
     }
@@ -67,6 +71,8 @@ class SoundService {
   // ─── Playback ──────────────────────────────────────────────────────────────
   Future<void> play(SoundType type) async {
     if (!_sfxOn) return;
+    if (!_initialized) init();
+    if (!_initialized) return;
     try {
       final bytes = switch (type) {
         SoundType.correct => _correct,
