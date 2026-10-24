@@ -53,6 +53,11 @@ class _PracticeSetupScreenState extends State<PracticeSetupScreen> {
       Operation.subtraction => '−',
       Operation.multiplication => '×',
       Operation.division => '÷',
+      Operation.modulo => '%',
+      Operation.exponent => 'x²',
+      Operation.squareRoot => '√',
+      Operation.percentage => '% of',
+      Operation.preAlgebra => 'Pre-Algebra',
     };
     Navigator.push(
       context,
@@ -268,6 +273,31 @@ class _PracticeSetupScreenState extends State<PracticeSetupScreen> {
                               op: Operation.division,
                               selected: _ops.contains(Operation.division),
                               onTap: () => _toggleOp(Operation.division)),
+                          _OpButton(
+                              symbol: '%',
+                              op: Operation.modulo,
+                              selected: _ops.contains(Operation.modulo),
+                              onTap: () => _toggleOp(Operation.modulo)),
+                          _OpButton(
+                              symbol: 'x²',
+                              op: Operation.exponent,
+                              selected: _ops.contains(Operation.exponent),
+                              onTap: () => _toggleOp(Operation.exponent)),
+                          _OpButton(
+                              symbol: '√',
+                              op: Operation.squareRoot,
+                              selected: _ops.contains(Operation.squareRoot),
+                              onTap: () => _toggleOp(Operation.squareRoot)),
+                          _OpButton(
+                              symbol: '% of',
+                              op: Operation.percentage,
+                              selected: _ops.contains(Operation.percentage),
+                              onTap: () => _toggleOp(Operation.percentage)),
+                          _OpButton(
+                              symbol: '?',
+                              op: Operation.preAlgebra,
+                              selected: _ops.contains(Operation.preAlgebra),
+                              onTap: () => _toggleOp(Operation.preAlgebra)),
                         ],
                       ),
                     ),
@@ -552,7 +582,9 @@ class _OpButtonState extends State<_OpButton> {
           child: Text(
             widget.symbol,
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 28,
+              fontSize: widget.symbol.length > 2
+                  ? 16
+                  : (widget.symbol.length > 1 ? 22 : 28),
               fontWeight: FontWeight.w800,
               color: widget.selected ? Colors.white : AppColors.primary,
             ),

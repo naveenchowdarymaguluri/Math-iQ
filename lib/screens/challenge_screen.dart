@@ -74,6 +74,14 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
         Operation.multiplication,
       ];
     }
+    if (w <= 6) {
+      return [
+        Operation.addition,
+        Operation.subtraction,
+        Operation.multiplication,
+        Operation.division,
+      ];
+    }
     return Operation.values;
   }
 

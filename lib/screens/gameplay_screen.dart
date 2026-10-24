@@ -91,6 +91,11 @@ class _GameplayScreenState extends State<GameplayScreen>
     Operation.multiplication: 'Think of multiplication as equal groups.',
     Operation.division:
         'How many times does the divisor fit into the number?',
+    Operation.modulo: 'Find the remainder after dividing: 17 % 5 is 2 because 15 + 2 = 17!',
+    Operation.exponent: 'A square is multiplying the number by itself: 7² = 7 × 7 = 49.',
+    Operation.squareRoot: 'Think in reverse: what number multiplied by itself gives this?',
+    Operation.percentage: 'For 50% halve it, for 25% divide by 4, for 10% move decimal point!',
+    Operation.preAlgebra: 'Isolate the unknown: subtract or divide both sides to solve!',
   };
 
   @override

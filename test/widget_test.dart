@@ -88,4 +88,31 @@ void main() {
     expect(questions.isNotEmpty, isTrue);
     expect(questions.first.options.length, 4);
   });
+
+  test('New math operations generate valid questions with correct answers', () {
+    for (final op in [
+      Operation.modulo,
+      Operation.exponent,
+      Operation.squareRoot,
+      Operation.percentage,
+      Operation.preAlgebra,
+    ]) {
+      final questions = QuizQuestion.generate(
+        difficulty: Difficulty.medium,
+        operation: op,
+        rangeStart: 1,
+        rangeEnd: 50,
+        count: 10,
+      );
+
+      expect(questions.length, 10);
+      for (final q in questions) {
+        expect(q.options.length, 4);
+        expect(q.options.contains(q.correctAnswer), isTrue,
+            reason: 'Options must contain correct answer for ${op.name}');
+        expect(q.questionText.isNotEmpty, isTrue);
+        expect(q.correctAnswer >= 0, isTrue);
+      }
+    }
+  });
 }

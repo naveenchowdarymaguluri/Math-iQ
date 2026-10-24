@@ -37,8 +37,8 @@ extension ChallengeModeX on ChallengeMode {
         ChallengeMode.beginner => '＋  −',
         ChallengeMode.explorer => '×  ÷',
         ChallengeMode.challenger => '＋  −  ×',
-        ChallengeMode.master => '＋  −  ×  ÷',
-        ChallengeMode.grandmaster => '＋  −  ×  ÷',
+        ChallengeMode.master => '＋  −  ×  ÷  %',
+        ChallengeMode.grandmaster => 'All Operations — Extreme!',
       };
 
   List<Operation> get operations => switch (this) {
@@ -52,7 +52,13 @@ extension ChallengeModeX on ChallengeMode {
             Operation.subtraction,
             Operation.multiplication,
           ],
-        ChallengeMode.master => Operation.values,
+        ChallengeMode.master => [
+            Operation.addition,
+            Operation.subtraction,
+            Operation.multiplication,
+            Operation.division,
+            Operation.modulo,
+          ],
         ChallengeMode.grandmaster => Operation.values,
       };
 
