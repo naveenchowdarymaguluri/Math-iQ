@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "747411945304",
+    "project_id": "math-iq-7cbaf",
+    "storage_bucket": "math-iq-7cbaf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:747411945304:android:42265052a2e2849966972d",
+        "android_client_info": {
+          "package_name": "com.naveen.iqmath"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCVGD-eZfU-PQgqmveWVovMyE4MGULVgIg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      },
+      "admob_app_id": "ca-app-pub-8752701784048954~6273654879"
+    }
+  ],
+  "configuration_version": "1"
+}
