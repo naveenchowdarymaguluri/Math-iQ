@@ -162,18 +162,22 @@ class _AppBar extends StatelessWidget {
               GestureDetector(
                 onTap: () => showAppMenu(context),
                 child: const Icon(Icons.menu_rounded,
-                    color: AppColors.primary, size: 30),
+                    color: AppColors.primary, size: 28),
               ),
-              const SizedBox(width: 10),
-              Text(
-                'Math IQ',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Math IQ',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               // XP badge -> opens XP Shop
               GestureDetector(
                 onTap: () => Navigator.push(
@@ -182,7 +186,7 @@ class _AppBar extends StatelessWidget {
                 ),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
+                      horizontal: 8, vertical: 5),
                   decoration: BoxDecoration(
                     color: AppColors.secondaryContainer,
                     borderRadius: BorderRadius.circular(999),
@@ -197,12 +201,14 @@ class _AppBar extends StatelessWidget {
                     ],
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.stars_rounded,
-                          color: AppColors.secondary, size: 16),
-                      const SizedBox(width: 4),
+                          color: AppColors.secondary, size: 15),
+                      const SizedBox(width: 3),
                       Text(
                         '$xp XP',
+                        maxLines: 1,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -213,7 +219,7 @@ class _AppBar extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               // XP Shop Shortcut Icon
               GestureDetector(
                 onTap: () => Navigator.push(
@@ -222,7 +228,7 @@ class _AppBar extends StatelessWidget {
                 ),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 5),
+                      horizontal: 7, vertical: 5),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFF9F43).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
@@ -234,10 +240,11 @@ class _AppBar extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('🛍️', style: TextStyle(fontSize: 14)),
-                      const SizedBox(width: 4),
+                      const Text('🛍️', style: TextStyle(fontSize: 13)),
+                      const SizedBox(width: 3),
                       Text(
                         '$spendableXP',
+                        maxLines: 1,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
@@ -248,11 +255,11 @@ class _AppBar extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               GestureDetector(
                 onTap: () => showProfileSheet(context),
                 child: const Icon(Icons.account_circle_rounded,
-                    color: AppColors.primary, size: 30),
+                    color: AppColors.primary, size: 28),
               ),
             ],
           ),
@@ -358,44 +365,50 @@ class _HeroStrip extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    GestureDetector(
-                      onTap: () => showDailyStreakDialog(context),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            svc.streakDays > 0
-                                ? '🔥 ${svc.streakDays}-Day Streak!'
-                                : 'Math Learner',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          if (svc.canClaimDailyReward) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.softOrange,
-                                borderRadius: BorderRadius.circular(999),
-                              ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => showDailyStreakDialog(context),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
                               child: Text(
-                                'GIFT',
+                                svc.streakDays > 0
+                                    ? '🔥 ${svc.streakDays}-Day Streak!'
+                                    : 'Math Learner',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.primary,
                                 ),
                               ),
                             ),
+                            if (svc.canClaimDailyReward) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.softOrange,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  'GIFT',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     Text(
                       _titleForLevel(svc.level),
                       style: GoogleFonts.plusJakartaSans(
@@ -486,12 +499,16 @@ class _DailyStreakBanner extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          'Day $targetDay Reward Ready!',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.onSurface,
+                        Flexible(
+                          child: Text(
+                            'Day $targetDay Reward Ready!',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.onSurface,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -637,12 +654,16 @@ class _XpShopBanner extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        'XP Rewards Shop',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                      Flexible(
+                        child: Text(
+                          'XP Rewards Shop',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -655,6 +676,7 @@ class _XpShopBanner extends StatelessWidget {
                         ),
                         child: Text(
                           '${svc.spendableXP} IQ',
+                          maxLines: 1,
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,

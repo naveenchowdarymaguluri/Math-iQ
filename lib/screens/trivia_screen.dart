@@ -251,12 +251,16 @@ class _TriviaScreenState extends State<TriviaScreen> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      'OpenTDB Trivia',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.onSurface,
+                    Flexible(
+                      child: Text(
+                        'OpenTDB Trivia',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.onSurface,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -400,14 +404,19 @@ class _TriviaScreenState extends State<TriviaScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Question ${_currentIndex + 1} of ${_questions.length}',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.onSurfaceVariant,
+              Flexible(
+                child: Text(
+                  'Question ${_currentIndex + 1} of ${_questions.length}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               if (_streak > 0)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
@@ -659,11 +668,10 @@ class _TriviaResultDialog extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _statTile('Score', '$score/$total', AppColors.primary),
-                _statTile('Accuracy', '$pct%', AppColors.mintGreen),
-                _statTile('XP Earned', '+$xpEarned', AppColors.secondary),
+                Expanded(child: _statTile('Score', '$score/$total', AppColors.primary)),
+                Expanded(child: _statTile('Accuracy', '$pct%', AppColors.mintGreen)),
+                Expanded(child: _statTile('XP Earned', '+$xpEarned', AppColors.secondary)),
               ],
             ),
             const SizedBox(height: 24),
@@ -705,6 +713,8 @@ class _TriviaResultDialog extends StatelessWidget {
       children: [
         Text(
           value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: GoogleFonts.plusJakartaSans(
             fontSize: 20,
             fontWeight: FontWeight.w800,
@@ -714,6 +724,8 @@ class _TriviaResultDialog extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: GoogleFonts.beVietnamPro(
             fontSize: 11,
             color: AppColors.onSurfaceVariant,

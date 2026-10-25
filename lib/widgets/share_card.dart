@@ -71,8 +71,11 @@ class _ShareCardState extends State<ShareCard> {
               const SizedBox(height: 20),
 
               // Title + reward chip
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 10,
+                runSpacing: 6,
                 children: [
                   Text(
                     'Invite Friends',
@@ -82,7 +85,6 @@ class _ShareCardState extends State<ShareCard> {
                       color: AppColors.primary,
                     ),
                   ),
-                  const SizedBox(width: 10),
                   if (canEarn)
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -280,19 +282,28 @@ class _ProgressCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _Stat(icon: Icons.stars_rounded, label: '${svc.totalXP} XP'),
+              Flexible(
+                child: _Stat(
+                    icon: Icons.stars_rounded, label: '${svc.totalXP} XP'),
+              ),
               _divider(),
-              _Stat(
-                  icon: Icons.local_fire_department_rounded,
-                  label: '${svc.streakDays}d streak'),
+              Flexible(
+                child: _Stat(
+                    icon: Icons.local_fire_department_rounded,
+                    label: '${svc.streakDays}d streak'),
+              ),
               _divider(),
-              _Stat(
-                  icon: Icons.check_circle_rounded,
-                  label: '${svc.totalCorrectEver} ✓'),
+              Flexible(
+                child: _Stat(
+                    icon: Icons.check_circle_rounded,
+                    label: '${svc.totalCorrectEver} ✓'),
+              ),
               _divider(),
-              _Stat(
-                  icon: Icons.emoji_events_rounded,
-                  label: '$achievementsCount 🏅'),
+              Flexible(
+                child: _Stat(
+                    icon: Icons.emoji_events_rounded,
+                    label: '$achievementsCount 🏅'),
+              ),
             ],
           ),
           const SizedBox(height: 14),
@@ -462,12 +473,16 @@ class _Stat extends StatelessWidget {
       children: [
         Icon(icon, color: Colors.white70, size: 14),
         const SizedBox(width: 4),
-        Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
           ),
         ),
       ],

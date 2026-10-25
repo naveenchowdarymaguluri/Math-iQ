@@ -209,15 +209,14 @@ class _PlayerStatsRow extends StatelessWidget {
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _StatCol('⚡', '${svc.totalXP}', 'TOTAL XP'),
+          Expanded(child: _StatCol('⚡', '${svc.totalXP}', 'TOTAL XP')),
           _Divider(),
-          _StatCol('🏆', '${svc.level}', 'LEVEL'),
+          Expanded(child: _StatCol('🏆', '${svc.level}', 'LEVEL')),
           _Divider(),
-          _StatCol('🔥', '${svc.streakDays}d', 'STREAK'),
+          Expanded(child: _StatCol('🔥', '${svc.streakDays}d', 'STREAK')),
           _Divider(),
-          _StatCol('✅', '${svc.totalCorrectEver}', 'CORRECT'),
+          Expanded(child: _StatCol('✅', '${svc.totalCorrectEver}', 'CORRECT')),
         ],
       ),
     );
@@ -244,15 +243,23 @@ class _StatCol extends StatelessWidget {
       children: [
         Text(emoji, style: const TextStyle(fontSize: 18)),
         const SizedBox(height: 4),
-        Text(value,
-            style: GoogleFonts.plusJakartaSans(
-                fontSize: 16, fontWeight: FontWeight.w800)),
-        Text(label,
-            style: GoogleFonts.plusJakartaSans(
-                fontSize: 7,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
-                color: Colors.grey)),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.plusJakartaSans(
+              fontSize: 16, fontWeight: FontWeight.w800),
+        ),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.plusJakartaSans(
+              fontSize: 7,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: Colors.grey),
+        ),
       ],
     );
   }

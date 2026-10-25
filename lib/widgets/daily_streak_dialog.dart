@@ -186,12 +186,16 @@ class _DailyStreakSheetState extends State<DailyStreakSheet> {
                       const Icon(Icons.card_giftcard_rounded,
                           color: AppColors.onSecondaryContainer, size: 22),
                       const SizedBox(width: 8),
-                      Text(
-                        'Claim Day $nextDayToClaim Reward (+${DailyStreakReward.xpForDay(nextDayToClaim)} XP)',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.onSecondaryContainer,
+                      Flexible(
+                        child: Text(
+                          'Claim Day $nextDayToClaim Reward (+${DailyStreakReward.xpForDay(nextDayToClaim)} XP)',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.onSecondaryContainer,
+                          ),
                         ),
                       ),
                     ],
@@ -212,12 +216,16 @@ class _DailyStreakSheetState extends State<DailyStreakSheet> {
                       const Icon(Icons.check_circle_rounded,
                           color: AppColors.mintGreen, size: 20),
                       const SizedBox(width: 8),
-                      Text(
-                        'Today\'s Reward Claimed! Come back tomorrow.',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.onSurfaceVariant,
+                      Flexible(
+                        child: Text(
+                          'Today\'s Reward Claimed! Come back tomorrow.',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.onSurfaceVariant,
+                          ),
                         ),
                       ),
                     ],
@@ -458,15 +466,19 @@ class _Day7Card extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      'Day 7: Grand Weekly Chest',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.onSurface,
+                    Flexible(
+                      child: Text(
+                        'Day 7: Grand Weekly Chest',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.onSurface,
+                        ),
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
@@ -568,19 +580,24 @@ class _MilestoneStrip extends StatelessWidget {
               const Icon(Icons.military_tech_rounded,
                   color: AppColors.softOrange, size: 18),
               const SizedBox(width: 6),
-              Text(
-                'Next Milestone: $nextMilestone Days (+$milestoneReward Bonus XP)',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
+              Expanded(
+                child: Text(
+                  'Next: $nextMilestone Days (+$milestoneReward XP)',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 6),
               Text(
                 daysRemaining == 0
                     ? 'Achieved!'
-                    : '$daysRemaining days to go',
+                    : '$daysRemaining d left',
+                maxLines: 1,
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
@@ -706,17 +723,22 @@ class _StreakFreezeBar extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      'Streak Freeze',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.onSurface,
+                    Flexible(
+                      child: Text(
+                        'Streak Freeze',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.onSurface,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 6),
                     Text(
                       '($freezes/2)',
+                      maxLines: 1,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
