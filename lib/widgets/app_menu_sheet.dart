@@ -7,6 +7,8 @@ import '../screens/practice_setup_screen.dart';
 import '../screens/flag_quiz_screen.dart';
 import '../screens/challenge_screen.dart';
 import '../screens/trivia_screen.dart';
+import '../screens/xp_shop_screen.dart';
+import '../models/avatar_frame.dart';
 import 'daily_streak_dialog.dart';
 
 // ─── Public helpers ───────────────────────────────────────────────────────────
@@ -122,6 +124,13 @@ class _AppMenuSheet extends StatelessWidget {
             sub: 'Waves & 3 lives — how far can you go?',
             color: AppColors.mathRed,
             onTap: () => _go(context, const ChallengeScreen()),
+          ),
+          _MenuTile(
+            emoji: '🛍️',
+            title: 'XP Rewards Shop',
+            sub: 'Spend IQ for lifelines, themes & frames',
+            color: const Color(0xFFFF9F43),
+            onTap: () => _go(context, const XpShopScreen()),
             showDivider: false,
           ),
         ],
@@ -253,6 +262,7 @@ class _ProfileSheet extends StatelessWidget {
       listenable: PlayerDataService.instance,
       builder: (context, _) {
         final svc = PlayerDataService.instance;
+        final frame = AvatarFrame.getById(svc.equippedFrameId);
         return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
           child: Column(
@@ -271,7 +281,7 @@ class _ProfileSheet extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // Avatar + level ring
+              // Avatar + level ring + equipped frame
               Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -281,18 +291,32 @@ class _ProfileSheet extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: AppColors.primaryFixed,
-                      border: Border.all(color: AppColors.primary, width: 3),
-                      boxShadow: const [
+                      border: Border.all(
+                        color: frame.borderColor,
+                        width: frame.borderWidth,
+                      ),
+                      boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary,
-                          offset: Offset(0, 4),
-                          blurRadius: 0,
+                          color: frame.glowColor != Colors.transparent
+                              ? frame.glowColor
+                              : AppColors.primary,
+                          offset: const Offset(0, 4),
+                          blurRadius: frame.glowColor != Colors.transparent ? 8 : 0,
                         ),
                       ],
                     ),
                     child: const Icon(Icons.face_rounded,
                         color: AppColors.primary, size: 48),
                   ),
+                  if (frame.badgeEmoji.isNotEmpty)
+                    Positioned(
+                      top: -10,
+                      right: -6,
+                      child: Text(
+                        frame.badgeEmoji,
+                        style: const TextStyle(fontSize: 22),
+                      ),
+                    ),
                   Positioned(
                     bottom: -4,
                     right: -8,
@@ -398,11 +422,29 @@ class _ProfileSheet extends StatelessWidget {
                     const SizedBox(height: 8),
                     MathProgressBar(value: svc.levelProgress),
                     const SizedBox(height: 6),
-                    Text(
-                      '${svc.totalXP} XP total',
-                      style: GoogleFonts.beVietnamPro(
-                          fontSize: 12,
-                          color: AppColors.onSurfaceVariant),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '${svc.totalXP} lifetime XP',
+                          style: GoogleFonts.beVietnamPro(
+                              fontSize: 12,
+                              color: AppColors.onSurfaceVariant),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('•',
+                            style: TextStyle(
+                                color: AppColors.outlineVariant,
+                                fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 8),
+                        Text(
+                          '💎 ${svc.spendableXP} IQ to spend',
+                          style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFFD35400)),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -438,7 +480,39 @@ class _ProfileSheet extends StatelessWidget {
                       value: '${svc.bestFlagStreak}'),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+
+              // XP Shop button in ProfileSheet
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const XpShopScreen()),
+                    );
+                  },
+                  icon: const Text('🛍️', style: TextStyle(fontSize: 18)),
+                  label: Text(
+                    'XP Rewards Shop (${svc.spendableXP} IQ)',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF9F43),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
 
               // Close
               SizedBox(

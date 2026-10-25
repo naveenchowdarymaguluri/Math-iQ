@@ -148,4 +148,91 @@ void main() {
     expect(result2.alreadyClaimed, isTrue);
     expect(result2.totalRewardXP, 0);
   });
+
+  test('XP economy: spending XP does not degrade player level or totalXP', () async {
+    SharedPreferences.setMockInitialValues({'totalXP': 1000, 'spendableXP': 1000});
+    final svc = PlayerDataService.instance;
+    await svc.load();
+
+    expect(svc.totalXP, 1000);
+    expect(svc.spendableXP, 1000);
+    final initialLevel = svc.level;
+
+    // Spend 250 XP
+    final spent = await svc.spendXP(250);
+    expect(spent, isTrue);
+    expect(svc.spendableXP, 750);
+    expect(svc.totalXP, 1000); // totalXP remains intact!
+    expect(svc.level, initialLevel); // level is never downgraded!
+
+    // Cannot spend more than balance
+    final overspend = await svc.spendXP(9999);
+    expect(overspend, isFalse);
+    expect(svc.spendableXP, 750);
+  });
+
+  test('Lifelines and Streak Freeze inventory management and usage', () async {
+    SharedPreferences.setMockInitialValues({
+      'spendableXP': 500,
+      'lifeline5050Count': 0,
+      'lifelineTimeFreezeCount': 0,
+    });
+    final svc = PlayerDataService.instance;
+    await svc.load();
+
+    expect(svc.lifeline5050Count, 0);
+    expect(svc.lifelineTimeFreezeCount, 0);
+    expect(svc.streakFreezesCount, 0);
+
+    // Buy 1 streak freeze for 250 XP
+    final boughtFreeze = await svc.buyStreakFreeze();
+    expect(boughtFreeze, isTrue);
+    expect(svc.streakFreezesCount, 1);
+    expect(svc.spendableXP, 250);
+
+    // Use 50/50 lifeline directly via spendable XP (costs 60 XP)
+    final used5050 = await svc.use5050Lifeline();
+    expect(used5050, isTrue);
+    expect(svc.spendableXP, 190);
+
+    // Buy 1 Time Freeze pack (75 XP)
+    final boughtTimeFreeze = await svc.buyLifelineTimeFreeze(count: 1);
+    expect(boughtTimeFreeze, isTrue);
+    expect(svc.lifelineTimeFreezeCount, 1);
+    expect(svc.spendableXP, 115);
+
+    // Consuming equipped inventory
+    final usedTimeFreeze = await svc.useTimeFreezeLifeline();
+    expect(usedTimeFreeze, isTrue);
+    expect(svc.lifelineTimeFreezeCount, 0);
+    expect(svc.spendableXP, 115); // Used inventory, did not deduct XP!
+  });
+
+  test('Custom themes and avatar frames purchase and equip flow', () async {
+    SharedPreferences.setMockInitialValues({'spendableXP': 3000});
+    final svc = PlayerDataService.instance;
+    await svc.load();
+
+    expect(svc.equippedThemeId, 'classic');
+    expect(svc.equippedFrameId, 'none');
+
+    // Purchase & equip Forest Mint theme (1500 XP)
+    final boughtTheme = await svc.buyAndEquipTheme('forest_mint', 1500);
+    expect(boughtTheme, isTrue);
+    expect(svc.equippedThemeId, 'forest_mint');
+    expect(svc.unlockedThemeIds.contains('forest_mint'), isTrue);
+    expect(svc.spendableXP, 1500);
+
+    // Purchase & equip Royal Crown frame (800 XP)
+    final boughtFrame = await svc.buyAndEquipAvatarFrame('gold_crown', 800);
+    expect(boughtFrame, isTrue);
+    expect(svc.equippedFrameId, 'gold_crown');
+    expect(svc.unlockedFrameIds.contains('gold_crown'), isTrue);
+    expect(svc.spendableXP, 700);
+
+    // Re-equipping an already unlocked theme costs 0 XP
+    await svc.equipTheme('classic');
+    expect(svc.equippedThemeId, 'classic');
+    expect(svc.spendableXP, 700);
+  });
 }

@@ -7,9 +7,11 @@ import '../theme/app_colors.dart';
 import '../models/quiz_question.dart';
 import '../services/analytics_service.dart';
 import '../services/sound_service.dart';
+import '../services/player_data_service.dart';
 import '../widgets/ad_banner.dart';
 import '../widgets/dotted_background.dart';
 import '../widgets/math_progress_bar.dart';
+import '../widgets/lifeline_buttons_bar.dart';
 import 'challenge_results_screen.dart';
 
 const int _kQuestionsPerWave = 5;
@@ -40,6 +42,63 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   bool _showWaveComplete = false;
   bool _lifeLostFlash = false;
 
+  // ── Lifelines ─────────────────────────────────────────────────────────────
+  final Set<int> _eliminatedIndices = {};
+  bool _timeFreezeUsedOnCurrent = false;
+  bool _reviveUsed = false;
+
+  Future<void> _use5050() async {
+    if (_answered || _eliminatedIndices.isNotEmpty || _waveQuestions.isEmpty) return;
+    final svc = PlayerDataService.instance;
+    final ok = await svc.use5050Lifeline();
+    if (!ok) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Need 60 XP for 50/50 Lifeline!'),
+          backgroundColor: AppColors.mathRed,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final q = _waveQuestions[_qInWave];
+    final wrong = <int>[];
+    for (int i = 0; i < q.options.length; i++) {
+      if (q.options[i] != q.correctAnswer) wrong.add(i);
+    }
+    wrong.shuffle();
+    setState(() {
+      _eliminatedIndices.addAll(wrong.take(2));
+    });
+    SoundService.instance.play(SoundType.correct);
+    HapticFeedback.mediumImpact();
+  }
+
+  Future<void> _useTimeFreeze() async {
+    if (_answered || _timeFreezeUsedOnCurrent) return;
+    final svc = PlayerDataService.instance;
+    final ok = await svc.useTimeFreezeLifeline();
+    if (!ok) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Need 75 XP for Time Freeze!'),
+          backgroundColor: AppColors.mathRed,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _timeLeft += 10;
+      _timeFreezeUsedOnCurrent = true;
+    });
+    SoundService.instance.play(SoundType.levelUp);
+    HapticFeedback.mediumImpact();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +113,8 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
       _selectedIndex = null;
       _answered = false;
       _showWaveComplete = false;
+      _eliminatedIndices.clear();
+      _timeFreezeUsedOnCurrent = false;
       _waveQuestions = QuizQuestion.generateMixed(
         difficulty: _diffForWave(wave),
         operations: _opsForWave(wave),
@@ -188,9 +249,11 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   void _advance() {
     if (!mounted) return;
     if (_lives <= 0) {
-      _endGame();
+      _handleGameOverOrRevive();
       return;
     }
+    _eliminatedIndices.clear();
+    _timeFreezeUsedOnCurrent = false;
     if (_qInWave + 1 >= _kQuestionsPerWave) {
       setState(() => _showWaveComplete = true);
       SoundService.instance.play(SoundType.levelUp);
@@ -206,6 +269,41 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
       });
       _startTimer();
     }
+  }
+
+  Future<void> _handleGameOverOrRevive() async {
+    _timer?.cancel();
+    final svc = PlayerDataService.instance;
+    if (!_reviveUsed && svc.spendableXP >= 150) {
+      final revived = await showModalBottomSheet<bool>(
+        context: context,
+        isDismissible: false,
+        enableDrag: false,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => _ChallengeReviveSheet(
+          spendableXP: svc.spendableXP,
+          cost: 150,
+        ),
+      );
+      if (revived == true && mounted) {
+        final ok = await svc.reviveChallengeWithXP();
+        if (ok && mounted) {
+          setState(() {
+            _reviveUsed = true;
+            _lives = 1;
+            _answered = false;
+            _selectedIndex = null;
+            _eliminatedIndices.clear();
+            _timeFreezeUsedOnCurrent = false;
+          });
+          SoundService.instance.play(SoundType.levelUp);
+          HapticFeedback.mediumImpact();
+          _startTimer();
+          return;
+        }
+      }
+    }
+    _endGame();
   }
 
   void _endGame() {
@@ -334,7 +432,16 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                               ],
                               const SizedBox(height: 16),
                               _ProblemCard(question: q),
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 16),
+                              LifelineButtonsBar(
+                                is5050Used: _eliminatedIndices.isNotEmpty,
+                                isTimeFreezeUsed: _timeFreezeUsedOnCurrent,
+                                showTimeFreeze: true,
+                                isAnswered: _answered,
+                                onUse5050: _use5050,
+                                onUseTimeFreeze: _useTimeFreeze,
+                              ),
+                              const SizedBox(height: 14),
                               GridView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
@@ -352,6 +459,8 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                                     isCorrect: q.options[i] == q.correctAnswer,
                                     isSelected: _selectedIndex == i,
                                     isAnswered: _answered,
+                                    isEliminated:
+                                        _eliminatedIndices.contains(i),
                                     onTap: () => _selectAnswer(i),
                                   );
                                 },
@@ -583,6 +692,7 @@ class _AnswerButton extends StatefulWidget {
   final bool isCorrect;
   final bool isSelected;
   final bool isAnswered;
+  final bool isEliminated;
   final VoidCallback onTap;
 
   const _AnswerButton({
@@ -590,6 +700,7 @@ class _AnswerButton extends StatefulWidget {
     required this.isCorrect,
     required this.isSelected,
     required this.isAnswered,
+    this.isEliminated = false,
     required this.onTap,
   });
 
@@ -601,6 +712,7 @@ class _AnswerButtonState extends State<_AnswerButton> {
   bool _pressed = false;
 
   Color get _bg {
+    if (widget.isEliminated) return AppColors.surfaceContainerHigh;
     if (widget.isAnswered && widget.isCorrect) return AppColors.mintGreen;
     if (widget.isAnswered && widget.isSelected && !widget.isCorrect) {
       return AppColors.errorContainer;
@@ -609,6 +721,7 @@ class _AnswerButtonState extends State<_AnswerButton> {
   }
 
   Color get _border {
+    if (widget.isEliminated) return AppColors.outlineVariant;
     if (widget.isAnswered && widget.isCorrect) return const Color(0xFF247A33);
     if (widget.isAnswered && widget.isSelected && !widget.isCorrect) {
       return AppColors.error;
@@ -617,6 +730,7 @@ class _AnswerButtonState extends State<_AnswerButton> {
   }
 
   Color get _shadow {
+    if (widget.isEliminated) return Colors.transparent;
     if (widget.isAnswered && widget.isCorrect) return const Color(0xFF1E5C28);
     if (widget.isAnswered && widget.isSelected && !widget.isCorrect) {
       return AppColors.error;
@@ -625,6 +739,7 @@ class _AnswerButtonState extends State<_AnswerButton> {
   }
 
   Color get _textColor {
+    if (widget.isEliminated) return AppColors.outlineVariant;
     if (widget.isAnswered && widget.isCorrect) return Colors.white;
     if (widget.isAnswered && widget.isSelected && !widget.isCorrect) {
       return AppColors.error;
@@ -634,17 +749,16 @@ class _AnswerButtonState extends State<_AnswerButton> {
 
   @override
   Widget build(BuildContext context) {
+    final disabled = widget.isAnswered || widget.isEliminated;
     return GestureDetector(
-      onTapDown:
-          widget.isAnswered ? null : (_) => setState(() => _pressed = true),
-      onTapUp: widget.isAnswered
+      onTapDown: disabled ? null : (_) => setState(() => _pressed = true),
+      onTapUp: disabled
           ? null
           : (_) {
               setState(() => _pressed = false);
               widget.onTap();
             },
-      onTapCancel:
-          widget.isAnswered ? null : () => setState(() => _pressed = false),
+      onTapCancel: disabled ? null : () => setState(() => _pressed = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 100),
         transform: _pressed
@@ -654,7 +768,7 @@ class _AnswerButtonState extends State<_AnswerButton> {
           color: _bg,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: _border, width: 2),
-          boxShadow: _pressed
+          boxShadow: _pressed || widget.isEliminated
               ? []
               : [
                   BoxShadow(
@@ -671,6 +785,8 @@ class _AnswerButtonState extends State<_AnswerButton> {
               fontSize: 28,
               fontWeight: FontWeight.w700,
               color: _textColor,
+              decoration:
+                  widget.isEliminated ? TextDecoration.lineThrough : null,
             ),
           ),
         ),
@@ -678,3 +794,105 @@ class _AnswerButtonState extends State<_AnswerButton> {
     );
   }
 }
+
+// ─── Challenge Revive Bottom Sheet ───────────────────────────────────────────
+class _ChallengeReviveSheet extends StatelessWidget {
+  final int spendableXP;
+  final int cost;
+
+  const _ChallengeReviveSheet({
+    required this.spendableXP,
+    required this.cost,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 44,
+            height: 5,
+            decoration: BoxDecoration(
+              color: AppColors.outlineVariant,
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text('❤️‍🔥', style: TextStyle(fontSize: 48)),
+          const SizedBox(height: 10),
+          Text(
+            'Second Chance?',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: AppColors.inkPurple,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Keep your wave streak alive with +1 extra life!',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 22),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: Text(
+                    'Give Up',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(context, true),
+                  icon: const Icon(Icons.flash_on_rounded,
+                      color: Colors.white, size: 18),
+                  label: Text(
+                    'Revive ($cost XP)',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.mathRed,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+

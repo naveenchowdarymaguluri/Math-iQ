@@ -165,6 +165,10 @@ class _DailyStreakSheetState extends State<DailyStreakSheet> {
 
               // Milestone Tracker Strip
               _MilestoneStrip(streakDays: svc.streakDays),
+              const SizedBox(height: 16),
+
+              // Streak Freeze Protection Bar
+              _StreakFreezeBar(svc: svc),
               const SizedBox(height: 20),
 
               // Action button
@@ -653,6 +657,158 @@ class _ClaimSuccessCard extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Streak Freeze Bar ───────────────────────────────────────────────────────
+class _StreakFreezeBar extends StatelessWidget {
+  final PlayerDataService svc;
+  const _StreakFreezeBar({required this.svc});
+
+  @override
+  Widget build(BuildContext context) {
+    final freezes = svc.streakFreezesCount;
+    final isMax = freezes >= 2;
+    final canAfford = svc.canAfford(PlayerDataService.streakFreezeCost);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: freezes > 0
+              ? AppColors.softOrange.withValues(alpha: 0.6)
+              : AppColors.surfaceContainerHighest,
+          width: 2,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.softOrange.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Center(
+              child: Text('🛡️', style: TextStyle(fontSize: 18)),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Streak Freeze',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.onSurface,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '($freezes/2)',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.softOrange,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  freezes > 0
+                      ? 'Protects your streak if you miss a day.'
+                      : 'Equip freeze to protect your streak!',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (isMax)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.mintGreen.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'MAXED',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.mintGreen,
+                ),
+              ),
+            )
+          else
+            GestureDetector(
+              onTap: () async {
+                final ok = await svc.buyStreakFreeze();
+                if (ok) {
+                  SoundService.instance.play(SoundType.levelUp);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('🛡️ Streak Freeze equipped!'),
+                        backgroundColor: AppColors.mintGreen,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                } else {
+                  SoundService.instance.play(SoundType.wrong);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Need 250 XP for Streak Freeze!'),
+                        backgroundColor: AppColors.mathRed,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: canAfford
+                      ? AppColors.secondaryContainer
+                      : AppColors.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: canAfford
+                        ? AppColors.secondary
+                        : AppColors.surfaceContainerHighest,
+                    width: 1.5,
+                  ),
+                ),
+                child: Text(
+                  '+ Equip (250 XP)',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: canAfford
+                        ? AppColors.onSecondaryContainer
+                        : AppColors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

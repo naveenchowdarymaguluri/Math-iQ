@@ -13,6 +13,7 @@ import 'services/player_data_service.dart';
 import 'services/level_service.dart';
 import 'services/sound_service.dart';
 import 'services/subscription_service.dart';
+import 'models/app_theme_custom.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -72,61 +73,72 @@ class MathIQApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Math IQ',
-      debugShowCheckedModeBanner: false,
-      navigatorObservers: [AnalyticsService.instance.observer],
-      theme: ThemeData(
-        useMaterial3: true,
-        scaffoldBackgroundColor: AppColors.creamBg,
-        colorScheme: const ColorScheme.light(
-          primary: AppColors.primary,
-          secondary: AppColors.secondary,
-          surface: AppColors.surfaceContainerLowest,
-          error: AppColors.error,
-          onPrimary: Colors.white,
-          onSecondary: Colors.white,
-          onSurface: AppColors.onSurface,
-          onError: Colors.white,
-        ),
-        fontFamily: 'BeVietnamPro',
-        textTheme: const TextTheme(
-          bodyMedium: TextStyle(
+    return ListenableBuilder(
+      listenable: PlayerDataService.instance,
+      builder: (context, _) {
+        final customTheme = AppThemeCustom.getById(
+            PlayerDataService.instance.equippedThemeId);
+        final isDark = customTheme.background.computeLuminance() < 0.2;
+
+        return MaterialApp(
+          title: 'Math IQ',
+          debugShowCheckedModeBanner: false,
+          navigatorObservers: [AnalyticsService.instance.observer],
+          theme: ThemeData(
+            useMaterial3: true,
+            brightness: isDark ? Brightness.dark : Brightness.light,
+            scaffoldBackgroundColor: customTheme.background,
+            colorScheme: ColorScheme(
+              brightness: isDark ? Brightness.dark : Brightness.light,
+              primary: customTheme.primary,
+              secondary: customTheme.accent,
+              surface: customTheme.surface,
+              error: AppColors.error,
+              onPrimary: isDark ? Colors.black : Colors.white,
+              onSecondary: isDark ? Colors.black : Colors.white,
+              onSurface: customTheme.onBackground,
+              onError: Colors.white,
+            ),
             fontFamily: 'BeVietnamPro',
-            color: AppColors.onSurface,
+            textTheme: TextTheme(
+              bodyMedium: TextStyle(
+                fontFamily: 'BeVietnamPro',
+                color: customTheme.onBackground,
+              ),
+            ),
+            appBarTheme: AppBarTheme(
+              backgroundColor: customTheme.surface,
+              foregroundColor: customTheme.onBackground,
+              elevation: 0,
+            ),
+            elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: customTheme.primary,
+                foregroundColor: isDark ? Colors.black : Colors.white,
+                shape: const StadiumBorder(),
+              ),
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: customTheme.surface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(999),
+                borderSide: BorderSide(
+                    color: customTheme.surfaceContainer, width: 2),
+              ),
+            ),
+            pageTransitionsTheme: const PageTransitionsTheme(
+              builders: {
+                TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+                TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+              },
+            ),
           ),
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.surface,
-          foregroundColor: AppColors.onSurface,
-          elevation: 0,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            shape: const StadiumBorder(),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: AppColors.surfaceContainerLowest,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(999),
-            borderSide: const BorderSide(
-                color: AppColors.surfaceContainerHighest, width: 2),
-          ),
-        ),
-        pageTransitionsTheme: const PageTransitionsTheme(
-          builders: {
-            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-          },
-        ),
-      ),
-      home: PlayerDataService.instance.hasSeenOnboarding
-          ? const MainShell()
-          : const WelcomeScreen(),
+          home: PlayerDataService.instance.hasSeenOnboarding
+              ? const MainShell()
+              : const WelcomeScreen(),
+        );
+      },
     );
   }
 }

@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/session_result.dart';
 import '../models/daily_quest.dart';
 import '../models/daily_streak_reward.dart';
+import '../models/app_theme_custom.dart';
+import '../models/avatar_frame.dart';
 import 'analytics_service.dart';
 
 class PlayerDataService extends ChangeNotifier {
@@ -12,11 +14,21 @@ class PlayerDataService extends ChangeNotifier {
   PlayerDataService._();
 
   // ─── Persistent state ──────────────────────────────────────────────────────
-  int totalXP = 0;
+  int totalXP = 0;        // Lifetime XP (determines player level and rank)
+  int spendableXP = 0;    // Spendable currency (IQ Points for shop & power-ups)
   int totalCorrectEver = 0;
   int totalSessionsEver = 0;
   List<SessionResult> recentSessions = []; // up to 20
   Set<String> unlockedAchievements = {};
+
+  // Power-ups & Shop inventory
+  int streakFreezesCount = 0;         // max 2
+  int lifeline5050Count = 1;          // starter 1 free
+  int lifelineTimeFreezeCount = 1;    // starter 1 free
+  String equippedThemeId = 'classic';
+  Set<String> unlockedThemeIds = {'classic'};
+  String equippedFrameId = 'none';
+  Set<String> unlockedFrameIds = {'none'};
 
   // Challenge high score
   int bestChallengeWave = 0;
@@ -55,6 +67,10 @@ class PlayerDataService extends ChangeNotifier {
   int get level => levelFromXP(totalXP);
   double get levelProgress => levelProgressFromXP(totalXP);
   int get xpForNextLevel => xpForLevel(level + 1) - totalXP;
+
+  AppThemeCustom get currentTheme => AppThemeCustom.getById(equippedThemeId);
+  AvatarFrame get currentAvatarFrame => AvatarFrame.getById(equippedFrameId);
+  bool canAfford(int amount) => spendableXP >= amount;
 
   int get streakDays => _persistedStreakDays;
   List<bool> get weekActivity => _computeWeekActivity();
@@ -109,6 +125,17 @@ class PlayerDataService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
     totalXP = prefs.getInt('totalXP') ?? 0;
+    spendableXP = prefs.getInt('spendableXP') ?? totalXP;
+    streakFreezesCount = prefs.getInt('streakFreezesCount') ?? 0;
+    lifeline5050Count = prefs.getInt('lifeline5050Count') ?? 1;
+    lifelineTimeFreezeCount = prefs.getInt('lifelineTimeFreezeCount') ?? 1;
+    equippedThemeId = prefs.getString('equippedThemeId') ?? 'classic';
+    unlockedThemeIds =
+        (prefs.getStringList('unlockedThemeIds') ?? ['classic']).toSet();
+    equippedFrameId = prefs.getString('equippedFrameId') ?? 'none';
+    unlockedFrameIds =
+        (prefs.getStringList('unlockedFrameIds') ?? ['none']).toSet();
+
     totalCorrectEver = prefs.getInt('totalCorrect') ?? 0;
     totalSessionsEver = prefs.getInt('totalSessionsEver') ?? 0;
     sfxOn = prefs.getBool('sfxOn') ?? true;
@@ -161,6 +188,7 @@ class PlayerDataService extends ChangeNotifier {
     final prevAchievements = Set<String>.from(unlockedAchievements);
 
     totalXP += result.xpEarned;
+    spendableXP += result.xpEarned;
     totalCorrectEver += result.correct;
     totalSessionsEver++;
 
@@ -173,6 +201,7 @@ class PlayerDataService extends ChangeNotifier {
     final streakBonus = _awardDailyBonus();
     if (streakBonus > 0) {
       totalXP  += streakBonus;
+      spendableXP += streakBonus;
       todayXP  += streakBonus;
     }
 
@@ -224,6 +253,7 @@ class PlayerDataService extends ChangeNotifier {
   }) async {
     _ensureTodayReset();
     totalXP += xpEarned;
+    spendableXP += xpEarned;
     totalCorrectEver += correct;
     totalSessionsEver++;
     todayFlagQuiz = true;
@@ -249,6 +279,7 @@ class PlayerDataService extends ChangeNotifier {
     final streakBonus = _awardDailyBonus();
     if (streakBonus > 0) {
       totalXP  += streakBonus;
+      spendableXP += streakBonus;
       todayXP  += streakBonus;
     }
 
@@ -303,6 +334,7 @@ class PlayerDataService extends ChangeNotifier {
     final prevAchievements = Set<String>.from(unlockedAchievements);
 
     totalXP += xpEarned;
+    spendableXP += xpEarned;
     totalCorrectEver += correct;
     totalSessionsEver++;
     todayRounds++;
@@ -325,6 +357,7 @@ class PlayerDataService extends ChangeNotifier {
     final streakBonus = _awardDailyBonus();
     if (streakBonus > 0) {
       totalXP  += streakBonus;
+      spendableXP += streakBonus;
       todayXP  += streakBonus;
     }
 
@@ -370,6 +403,7 @@ class PlayerDataService extends ChangeNotifier {
     if (!quest.completed || questClaimed[index]) return;
 
     totalXP += quest.xpReward;
+    spendableXP += quest.xpReward;
     questClaimed[index] = true;
 
     // Check daily champion achievement
@@ -410,8 +444,14 @@ class PlayerDataService extends ChangeNotifier {
       // Gameplay session already bumped streak today
       if (_persistedStreakDays <= 0) _persistedStreakDays = 1;
     } else {
-      // Streak broken or brand new user
-      _persistedStreakDays = 1;
+      // User missed yesterday! Check if equipped Streak Freeze can protect it
+      if (streakFreezesCount > 0 && _persistedStreakDays > 0) {
+        streakFreezesCount--;
+        _persistedStreakDays++;
+      } else {
+        // Streak broken or brand new user
+        _persistedStreakDays = 1;
+      }
     }
 
     _lastStreakClaimDate = today;
@@ -439,6 +479,7 @@ class PlayerDataService extends ChangeNotifier {
 
     final totalEarned = baseXP + milestoneBonus;
     totalXP += totalEarned;
+    spendableXP += totalEarned;
     todayXP += totalEarned;
 
     // Streak achievements
@@ -473,6 +514,7 @@ class PlayerDataService extends ChangeNotifier {
   Future<void> addBonusXP(int amount) async {
     if (amount <= 0) return;
     totalXP += amount;
+    spendableXP += amount;
     todayXP += amount;
     await _save();
     notifyListeners();
@@ -494,13 +536,153 @@ class PlayerDataService extends ChangeNotifier {
   Future<void> recordShare() async {
     totalShares++;
     // Award tiered XP for first N shares
-    if (totalShares <= _maxReferralShares) totalXP += _xpForShare(totalShares);
+    if (totalShares <= _maxReferralShares) {
+      final earned = _xpForShare(totalShares);
+      totalXP += earned;
+      spendableXP += earned;
+    }
     // Sticker unlocks
     if (totalShares >= 3)  unlockedAchievements.add('ambassador');
     if (totalShares >= 5)  unlockedAchievements.add('influencer');
     if (totalShares >= 10) unlockedAchievements.add('shares_10');
     await _save();
     notifyListeners();
+  }
+
+  // ─── Power-ups, Lifelines & XP Shop ───────────────────────────────────────
+  static const int streakFreezeCost = 250;
+  static const int lifeline5050Cost = 60;
+  static const int lifelineTimeFreezeCost = 75;
+  static const int challengeReviveCost = 150;
+
+  Future<bool> spendXP(int amount) async {
+    if (amount <= 0) return true;
+    if (spendableXP < amount) return false;
+    spendableXP -= amount;
+    await _save();
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> buyStreakFreeze() async {
+    if (streakFreezesCount >= 2) return false;
+    if (!canAfford(streakFreezeCost)) return false;
+    spendableXP -= streakFreezeCost;
+    streakFreezesCount++;
+    await _save();
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> buyLifeline5050({int count = 1}) async {
+    final cost = lifeline5050Cost * count;
+    if (!canAfford(cost)) return false;
+    spendableXP -= cost;
+    lifeline5050Count += count;
+    await _save();
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> buyLifelineTimeFreeze({int count = 1}) async {
+    final cost = lifelineTimeFreezeCost * count;
+    if (!canAfford(cost)) return false;
+    spendableXP -= cost;
+    lifelineTimeFreezeCount += count;
+    await _save();
+    notifyListeners();
+    return true;
+  }
+
+  /// Consumes 1 50/50 lifeline if in inventory, or spends [lifeline5050Cost] XP.
+  Future<bool> use5050Lifeline() async {
+    if (lifeline5050Count > 0) {
+      lifeline5050Count--;
+      await _save();
+      notifyListeners();
+      return true;
+    }
+    if (canAfford(lifeline5050Cost)) {
+      spendableXP -= lifeline5050Cost;
+      await _save();
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  /// Consumes 1 Time Freeze lifeline if in inventory, or spends [lifelineTimeFreezeCost] XP.
+  Future<bool> useTimeFreezeLifeline() async {
+    if (lifelineTimeFreezeCount > 0) {
+      lifelineTimeFreezeCount--;
+      await _save();
+      notifyListeners();
+      return true;
+    }
+    if (canAfford(lifelineTimeFreezeCost)) {
+      spendableXP -= lifelineTimeFreezeCost;
+      await _save();
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  /// Revives the player in Challenge mode for [challengeReviveCost] XP.
+  Future<bool> reviveChallengeWithXP() async {
+    if (!canAfford(challengeReviveCost)) return false;
+    spendableXP -= challengeReviveCost;
+    await _save();
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> buyAndEquipTheme(String themeId, int cost) async {
+    if (unlockedThemeIds.contains(themeId)) {
+      equippedThemeId = themeId;
+      await _save();
+      notifyListeners();
+      return true;
+    }
+    if (!canAfford(cost)) return false;
+    spendableXP -= cost;
+    unlockedThemeIds.add(themeId);
+    equippedThemeId = themeId;
+    await _save();
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> equipTheme(String themeId) async {
+    if (unlockedThemeIds.contains(themeId)) {
+      equippedThemeId = themeId;
+      await _save();
+      notifyListeners();
+    }
+  }
+
+  Future<bool> buyAndEquipAvatarFrame(String frameId, int cost) async {
+    if (unlockedFrameIds.contains(frameId)) {
+      equippedFrameId = frameId;
+      await _save();
+      notifyListeners();
+      return true;
+    }
+    if (!canAfford(cost)) return false;
+    spendableXP -= cost;
+    unlockedFrameIds.add(frameId);
+    equippedFrameId = frameId;
+    await _save();
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> equipAvatarFrame(String frameId) async {
+    if (unlockedFrameIds.contains(frameId)) {
+      equippedFrameId = frameId;
+      await _save();
+      notifyListeners();
+    }
   }
 
   // ─── Settings ──────────────────────────────────────────────────────────────
@@ -534,6 +716,14 @@ class PlayerDataService extends ChangeNotifier {
   /// Wipe all progress (used in settings).
   Future<void> resetAll() async {
     totalXP = 0;
+    spendableXP = 0;
+    streakFreezesCount = 0;
+    lifeline5050Count = 1;
+    lifelineTimeFreezeCount = 1;
+    equippedThemeId = 'classic';
+    unlockedThemeIds = {'classic'};
+    equippedFrameId = 'none';
+    unlockedFrameIds = {'none'};
     totalCorrectEver = 0;
     totalSessionsEver = 0;
     bestChallengeWave = 0;
@@ -640,8 +830,14 @@ class PlayerDataService extends ChangeNotifier {
     } else if (_streakUpdatedDate == yesterday || _lastStreakClaimDate == yesterday) {
       _persistedStreakDays++;
     } else {
-      // Streak broken — reset to 1 for today.
-      _persistedStreakDays = 1;
+      // Check if equipped Streak Freeze can save the streak
+      if (streakFreezesCount > 0 && _persistedStreakDays > 0) {
+        streakFreezesCount--;
+        _persistedStreakDays++;
+      } else {
+        // Streak broken — reset to 1 for today.
+        _persistedStreakDays = 1;
+      }
     }
     _streakUpdatedDate = today;
   }
@@ -738,6 +934,14 @@ class PlayerDataService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('hasSeenOnboarding', hasSeenOnboarding);
     await prefs.setInt('totalXP', totalXP);
+    await prefs.setInt('spendableXP', spendableXP);
+    await prefs.setInt('streakFreezesCount', streakFreezesCount);
+    await prefs.setInt('lifeline5050Count', lifeline5050Count);
+    await prefs.setInt('lifelineTimeFreezeCount', lifelineTimeFreezeCount);
+    await prefs.setString('equippedThemeId', equippedThemeId);
+    await prefs.setStringList('unlockedThemeIds', unlockedThemeIds.toList());
+    await prefs.setString('equippedFrameId', equippedFrameId);
+    await prefs.setStringList('unlockedFrameIds', unlockedFrameIds.toList());
     await prefs.setInt('totalCorrect', totalCorrectEver);
     await prefs.setInt('totalSessionsEver', totalSessionsEver);
     await prefs.setInt('bestChallengeWave', bestChallengeWave);

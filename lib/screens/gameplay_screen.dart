@@ -12,6 +12,8 @@ import '../widgets/ad_banner.dart';
 import '../widgets/dotted_background.dart';
 import '../widgets/math_progress_bar.dart';
 import '../widgets/tactile_button.dart';
+import '../widgets/lifeline_buttons_bar.dart';
+import '../services/player_data_service.dart';
 import 'results_screen.dart';
 
 class GameplayScreen extends StatefulWidget {
@@ -76,6 +78,62 @@ class _GameplayScreenState extends State<GameplayScreen>
 
   // ── Milestone celebration ────────────────────────────────────────────────
   String? _milestoneMsg;
+
+  // ── In-Game Lifelines ─────────────────────────────────────────────────────
+  final Set<int> _eliminatedIndices = {};
+  bool _timeFreezeUsedOnCurrent = false;
+
+  Future<void> _use5050() async {
+    if (_answered || _eliminatedIndices.isNotEmpty) return;
+    final svc = PlayerDataService.instance;
+    final ok = await svc.use5050Lifeline();
+    if (!ok) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Need 60 XP for 50/50 Lifeline!'),
+          backgroundColor: AppColors.mathRed,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final q = _activeQ;
+    final wrong = <int>[];
+    for (int i = 0; i < q.options.length; i++) {
+      if (q.options[i] != q.correctAnswer) wrong.add(i);
+    }
+    wrong.shuffle();
+    setState(() {
+      _eliminatedIndices.addAll(wrong.take(2));
+    });
+    SoundService.instance.play(SoundType.correct);
+    HapticFeedback.mediumImpact();
+  }
+
+  Future<void> _useTimeFreeze() async {
+    if (_answered || widget.secondsPerQuestion == 0) return;
+    final svc = PlayerDataService.instance;
+    final ok = await svc.useTimeFreezeLifeline();
+    if (!ok) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Need 75 XP for Time Freeze!'),
+          backgroundColor: AppColors.mathRed,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _timeLeft += 10;
+      _timeFreezeUsedOnCurrent = true;
+    });
+    SoundService.instance.play(SoundType.levelUp);
+    HapticFeedback.mediumImpact();
+  }
 
   late AnimationController _bounceCtrl;
 
@@ -251,6 +309,9 @@ class _GameplayScreenState extends State<GameplayScreen>
   // ── Advance ──────────────────────────────────────────────────────────────────
   void _advance() {
     if (!mounted) return;
+    _eliminatedIndices.clear();
+    _timeFreezeUsedOnCurrent = false;
+
     if (widget.isUnlimited) {
       // Generate next question immediately
       setState(() {
@@ -524,7 +585,20 @@ class _GameplayScreenState extends State<GameplayScreen>
                     _ProblemCard(
                         question: q,
                         useKeyboard: widget.useNumberKeyboard),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
+
+                    // In-Game Lifelines (50/50 and Time Freeze)
+                    if (!widget.useNumberKeyboard || widget.secondsPerQuestion > 0) ...[
+                      LifelineButtonsBar(
+                        is5050Used: _eliminatedIndices.isNotEmpty || widget.useNumberKeyboard,
+                        isTimeFreezeUsed: _timeFreezeUsedOnCurrent,
+                        showTimeFreeze: widget.secondsPerQuestion > 0,
+                        isAnswered: _answered,
+                        onUse5050: _use5050,
+                        onUseTimeFreeze: _useTimeFreeze,
+                      ),
+                      const SizedBox(height: 14),
+                    ],
 
                     // Answer input — keypad OR MCQ grid
                     if (widget.useNumberKeyboard)
@@ -563,6 +637,7 @@ class _GameplayScreenState extends State<GameplayScreen>
                           isCorrect: q.options[i] == q.correctAnswer,
                           isSelected: _selectedIndex == i,
                           isAnswered: _answered,
+                          isEliminated: _eliminatedIndices.contains(i),
                           onTap: () => _selectAnswer(i),
                         ),
                       ),
@@ -833,6 +908,7 @@ class _AnswerButton extends StatefulWidget {
   final bool isCorrect;
   final bool isSelected;
   final bool isAnswered;
+  final bool isEliminated;
   final VoidCallback onTap;
 
   const _AnswerButton({
@@ -840,6 +916,7 @@ class _AnswerButton extends StatefulWidget {
     required this.isCorrect,
     required this.isSelected,
     required this.isAnswered,
+    this.isEliminated = false,
     required this.onTap,
   });
 
@@ -851,6 +928,7 @@ class _AnswerButtonState extends State<_AnswerButton> {
   bool _pressed = false;
 
   Color get _bg {
+    if (widget.isEliminated) return AppColors.surfaceContainerHigh;
     if (widget.isAnswered && widget.isCorrect) return AppColors.mintGreen;
     if (widget.isAnswered && widget.isSelected && !widget.isCorrect) {
       return AppColors.errorContainer;
@@ -859,6 +937,7 @@ class _AnswerButtonState extends State<_AnswerButton> {
   }
 
   Color get _border {
+    if (widget.isEliminated) return AppColors.surfaceContainerHighest;
     if (widget.isAnswered && widget.isCorrect) return const Color(0xFF247A33);
     if (widget.isAnswered && widget.isSelected && !widget.isCorrect) {
       return AppColors.error;
@@ -867,6 +946,7 @@ class _AnswerButtonState extends State<_AnswerButton> {
   }
 
   Color get _shadow {
+    if (widget.isEliminated) return Colors.transparent;
     if (widget.isAnswered && widget.isCorrect) return const Color(0xFF1E5C28);
     if (widget.isAnswered && widget.isSelected && !widget.isCorrect) {
       return AppColors.error;
@@ -875,6 +955,7 @@ class _AnswerButtonState extends State<_AnswerButton> {
   }
 
   Color get _textColor {
+    if (widget.isEliminated) return AppColors.outlineVariant;
     if (widget.isAnswered && widget.isCorrect) return Colors.white;
     if (widget.isAnswered && widget.isSelected && !widget.isCorrect) {
       return AppColors.error;
@@ -884,17 +965,19 @@ class _AnswerButtonState extends State<_AnswerButton> {
 
   @override
   Widget build(BuildContext context) {
+    final disabled = widget.isAnswered || widget.isEliminated;
+
     return GestureDetector(
       onTapDown:
-          widget.isAnswered ? null : (_) => setState(() => _pressed = true),
-      onTapUp: widget.isAnswered
+          disabled ? null : (_) => setState(() => _pressed = true),
+      onTapUp: disabled
           ? null
           : (_) {
               setState(() => _pressed = false);
               widget.onTap();
             },
       onTapCancel:
-          widget.isAnswered ? null : () => setState(() => _pressed = false),
+          disabled ? null : () => setState(() => _pressed = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 100),
         transform: _pressed
@@ -904,7 +987,7 @@ class _AnswerButtonState extends State<_AnswerButton> {
           color: _bg,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: _border, width: 2),
-          boxShadow: _pressed
+          boxShadow: _pressed || widget.isEliminated
               ? []
               : [
                   BoxShadow(
@@ -919,7 +1002,9 @@ class _AnswerButtonState extends State<_AnswerButton> {
             style: GoogleFonts.plusJakartaSans(
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
-                color: _textColor),
+                color: _textColor,
+                decoration:
+                    widget.isEliminated ? TextDecoration.lineThrough : null),
           ),
         ),
       ),

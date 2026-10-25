@@ -17,7 +17,9 @@ import 'level_select_screen.dart';
 import 'records_screen.dart';
 import 'challenge_screen.dart';
 import 'trivia_screen.dart';
+import 'xp_shop_screen.dart';
 import '../models/daily_streak_reward.dart';
+import '../models/avatar_frame.dart';
 import '../widgets/daily_streak_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -59,7 +61,10 @@ class _HomeScreenState extends State<HomeScreen> {
             return DottedBackground(
               child: Column(
                 children: [
-                  _AppBar(xp: svc.totalXP),
+                  _AppBar(
+                    xp: svc.totalXP,
+                    spendableXP: svc.spendableXP,
+                  ),
                   Expanded(
                     child: SingleChildScrollView(
                       padding:
@@ -72,6 +77,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
                           // ── Daily streak banner ───────────────────
                           _DailyStreakBanner(svc: svc),
+                          const SizedBox(height: 14),
+
+                          // ── XP Shop banner ───────────────────────
+                          _XpShopBanner(svc: svc),
                           const SizedBox(height: 20),
 
                           // ── Quick play ────────────────────────────
@@ -123,7 +132,8 @@ class _HomeScreenState extends State<HomeScreen> {
 // ─── App bar ─────────────────────────────────────────────────────────────────
 class _AppBar extends StatelessWidget {
   final int xp;
-  const _AppBar({required this.xp});
+  final int spendableXP;
+  const _AppBar({required this.xp, required this.spendableXP});
 
   @override
   Widget build(BuildContext context) {
@@ -146,62 +156,103 @@ class _AppBar extends StatelessWidget {
         ),
         child: Padding(
           padding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
               GestureDetector(
                 onTap: () => showAppMenu(context),
                 child: const Icon(Icons.menu_rounded,
-                    color: AppColors.primary, size: 32),
+                    color: AppColors.primary, size: 30),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Text(
                 'Math IQ',
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: 24,
+                  fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: AppColors.primary,
                 ),
               ),
               const Spacer(),
-              // XP badge
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.secondaryContainer,
-                  borderRadius: BorderRadius.circular(999),
-                  border:
-                      Border.all(color: AppColors.secondary, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: AppColors.secondary,
-                      offset: Offset(0, 2),
-                      blurRadius: 0,
-                    ),
-                  ],
+              // XP badge -> opens XP Shop
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const XpShopScreen()),
                 ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.stars_rounded,
-                        color: AppColors.secondary, size: 18),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$xp XP',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.onSecondaryContainer,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondaryContainer,
+                    borderRadius: BorderRadius.circular(999),
+                    border:
+                        Border.all(color: AppColors.secondary, width: 2),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: AppColors.secondary,
+                        offset: Offset(0, 2),
+                        blurRadius: 0,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.stars_rounded,
+                          color: AppColors.secondary, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$xp XP',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.onSecondaryContainer,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
+              // XP Shop Shortcut Icon
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const XpShopScreen()),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF9F43).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFFF9F43),
+                      width: 2,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('🛍️', style: TextStyle(fontSize: 14)),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$spendableXP',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFFD35400),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
               GestureDetector(
                 onTap: () => showProfileSheet(context),
                 child: const Icon(Icons.account_circle_rounded,
-                    color: AppColors.primary, size: 32),
+                    color: AppColors.primary, size: 30),
               ),
             ],
           ),
@@ -250,13 +301,33 @@ class _HeroStrip extends StatelessWidget {
                 height: 56,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border:
-                      Border.all(color: AppColors.primary, width: 2.5),
+                  border: Border.all(
+                    color: AvatarFrame.getById(svc.equippedFrameId).borderColor,
+                    width: AvatarFrame.getById(svc.equippedFrameId).borderWidth * 0.8,
+                  ),
                   color: AppColors.primaryFixed,
+                  boxShadow: [
+                    if (AvatarFrame.getById(svc.equippedFrameId).glowColor !=
+                        Colors.transparent)
+                      BoxShadow(
+                        color: AvatarFrame.getById(svc.equippedFrameId).glowColor,
+                        offset: const Offset(0, 2),
+                        blurRadius: 6,
+                      ),
+                  ],
                 ),
                 child: const Icon(Icons.face_rounded,
                     color: AppColors.primary, size: 30),
               ),
+              if (AvatarFrame.getById(svc.equippedFrameId).badgeEmoji.isNotEmpty)
+                Positioned(
+                  top: -8,
+                  right: -4,
+                  child: Text(
+                    AvatarFrame.getById(svc.equippedFrameId).badgeEmoji,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
               Positioned(
                 bottom: -4,
                 right: -4,
@@ -507,6 +578,108 @@ class _DailyStreakBanner extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 color: AppColors.primary,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── XP Rewards Shop Banner ──────────────────────────────────────────────────
+class _XpShopBanner extends StatelessWidget {
+  final PlayerDataService svc;
+  const _XpShopBanner({required this.svc});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const XpShopScreen()),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFF9F43), Color(0xFFFF5252)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33FF5252),
+              offset: Offset(0, 4),
+              blurRadius: 8,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.25),
+                shape: BoxShape.circle,
+                border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.6), width: 2),
+              ),
+              child: const Center(
+                child: Text('🛍️', style: TextStyle(fontSize: 22)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'XP Rewards Shop',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text(
+                          '${svc.spendableXP} IQ',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFFD35400),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Get 50/50, Freezes, color themes & frames',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withValues(alpha: 0.92),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Colors.white,
+              size: 14,
             ),
           ],
         ),
