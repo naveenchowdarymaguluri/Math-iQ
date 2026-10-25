@@ -7,6 +7,7 @@ import '../screens/practice_setup_screen.dart';
 import '../screens/flag_quiz_screen.dart';
 import '../screens/challenge_screen.dart';
 import '../screens/trivia_screen.dart';
+import 'daily_streak_dialog.dart';
 
 // ─── Public helpers ───────────────────────────────────────────────────────────
 
@@ -84,6 +85,16 @@ class _AppMenuSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
+          _MenuTile(
+            emoji: '🎁',
+            title: 'Daily Streak Rewards',
+            sub: 'Claim daily login XP & view calendar',
+            color: AppColors.softOrange,
+            onTap: () {
+              Navigator.of(context).pop();
+              showDailyStreakDialog(context);
+            },
+          ),
           _MenuTile(
             emoji: '🧮',
             title: 'Practice',
@@ -317,21 +328,36 @@ class _ProfileSheet extends StatelessWidget {
               ),
               if (svc.streakDays > 0) ...[
                 const SizedBox(height: 4),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.softOrange.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                        color: AppColors.softOrange.withValues(alpha: 0.4)),
-                  ),
-                  child: Text(
-                    '🔥 ${svc.streakDays}-day streak!',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.softOrange,
+                GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    showDailyStreakDialog(context);
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.softOrange.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                          color: AppColors.softOrange.withValues(alpha: 0.4),
+                          width: 1.5),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '🔥 ${svc.streakDays}-day streak!',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.softOrange,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.arrow_forward_ios_rounded,
+                            size: 11, color: AppColors.softOrange),
+                      ],
                     ),
                   ),
                 ),

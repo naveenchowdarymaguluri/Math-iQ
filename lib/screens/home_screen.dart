@@ -17,9 +17,35 @@ import 'level_select_screen.dart';
 import 'records_screen.dart';
 import 'challenge_screen.dart';
 import 'trivia_screen.dart';
+import '../models/daily_streak_reward.dart';
+import '../widgets/daily_streak_dialog.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool _hasPromptedDailyStreak = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkDailyStreak();
+    });
+  }
+
+  void _checkDailyStreak() {
+    if (_hasPromptedDailyStreak || !mounted) return;
+    final svc = PlayerDataService.instance;
+    if (svc.canClaimDailyReward) {
+      _hasPromptedDailyStreak = true;
+      showDailyStreakDialog(context);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +68,10 @@ class HomeScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _HeroStrip(svc: svc),
+                          const SizedBox(height: 14),
+
+                          // ── Daily streak banner ───────────────────
+                          _DailyStreakBanner(svc: svc),
                           const SizedBox(height: 20),
 
                           // ── Quick play ────────────────────────────
@@ -257,14 +287,41 @@ class _HeroStrip extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      svc.streakDays > 0
-                          ? '🔥 ${svc.streakDays}-Day Streak!'
-                          : 'Math Learner',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
+                    GestureDetector(
+                      onTap: () => showDailyStreakDialog(context),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            svc.streakDays > 0
+                                ? '🔥 ${svc.streakDays}-Day Streak!'
+                                : 'Math Learner',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          if (svc.canClaimDailyReward) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.softOrange,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                'GIFT',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                     const Spacer(),
@@ -304,6 +361,155 @@ class _HeroStrip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Daily Streak Banner ──────────────────────────────────────────────────────
+class _DailyStreakBanner extends StatelessWidget {
+  final PlayerDataService svc;
+  const _DailyStreakBanner({required this.svc});
+
+  @override
+  Widget build(BuildContext context) {
+    final canClaim = svc.canClaimDailyReward;
+    final targetDay = svc.nextStreakDayToClaim;
+    final rewardXP = DailyStreakReward.xpForDay(targetDay);
+
+    if (canClaim) {
+      return GestureDetector(
+        onTap: () => showDailyStreakDialog(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.secondaryFixed.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.secondary, width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.secondary,
+                offset: Offset(0, 3),
+                blurRadius: 0,
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.secondaryContainer,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.secondary, width: 2),
+                ),
+                child: const Center(
+                  child: Text('🎁', style: TextStyle(fontSize: 22)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Day $targetDay Reward Ready!',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.onSurface,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.softOrange,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            'CLAIM',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '+$rewardXP XP streak bonus waiting for you today',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded,
+                  size: 16, color: AppColors.secondary),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Already claimed today
+    return GestureDetector(
+      onTap: () => showDailyStreakDialog(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(16),
+          border:
+              Border.all(color: AppColors.surfaceContainerHighest, width: 2),
+        ),
+        child: Row(
+          children: [
+            const Text('🔥', style: TextStyle(fontSize: 20)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${svc.streakDays}-Day Streak Active',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  Text(
+                    'Day ${svc.currentStreakDayInCycle}/7 claimed • Next reward tomorrow',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              'Calendar ➔',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

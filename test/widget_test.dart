@@ -5,6 +5,8 @@ import 'package:mathiq/models/challenge_level.dart';
 import 'package:mathiq/services/level_service.dart';
 import 'package:mathiq/models/trivia_question.dart';
 import 'package:mathiq/services/trivia_service.dart';
+import 'package:mathiq/models/daily_streak_reward.dart';
+import 'package:mathiq/services/player_data_service.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -114,5 +116,36 @@ void main() {
         expect(q.correctAnswer >= 0, isTrue);
       }
     }
+  });
+
+  test('Daily streak reward awards correct scaling XP and prevents duplicate claim', () async {
+    SharedPreferences.setMockInitialValues({});
+    final svc = PlayerDataService.instance;
+    await svc.load();
+
+    // Verify 7-day scale values
+    expect(DailyStreakReward.xpForDay(1), 50);
+    expect(DailyStreakReward.xpForDay(2), 75);
+    expect(DailyStreakReward.xpForDay(3), 100);
+    expect(DailyStreakReward.xpForDay(4), 125);
+    expect(DailyStreakReward.xpForDay(5), 150);
+    expect(DailyStreakReward.xpForDay(6), 200);
+    expect(DailyStreakReward.xpForDay(7), 350);
+
+    // Initial claim
+    expect(svc.canClaimDailyReward, isTrue);
+    final initialXP = svc.totalXP;
+
+    final result1 = await svc.claimDailyStreakReward();
+    expect(result1.alreadyClaimed, isFalse);
+    expect(result1.streakDays, greaterThanOrEqualTo(1));
+    expect(result1.totalRewardXP, greaterThan(0));
+    expect(svc.totalXP, initialXP + result1.totalRewardXP);
+    expect(svc.canClaimDailyReward, isFalse);
+
+    // Second claim on same day should be rejected
+    final result2 = await svc.claimDailyStreakReward();
+    expect(result2.alreadyClaimed, isTrue);
+    expect(result2.totalRewardXP, 0);
   });
 }

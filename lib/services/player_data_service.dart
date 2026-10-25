@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/session_result.dart';
 import '../models/daily_quest.dart';
+import '../models/daily_streak_reward.dart';
 import 'analytics_service.dart';
 
 class PlayerDataService extends ChangeNotifier {
@@ -35,9 +36,10 @@ class PlayerDataService extends ChangeNotifier {
   int totalShares = 0;
   static const _maxReferralShares = 10;
 
-  // Streak persistence (avoids the 20-session cap bug)
+  // Streak persistence (avoids the 20-session cap bug) and daily rewards
   int _persistedStreakDays = 0;
   String _streakUpdatedDate = '';
+  String _lastStreakClaimDate = '';
   bool _bonusAwardedToday = false;
 
   // ─── Daily state (resets when date changes) ────────────────────────────────
@@ -56,6 +58,31 @@ class PlayerDataService extends ChangeNotifier {
 
   int get streakDays => _persistedStreakDays;
   List<bool> get weekActivity => _computeWeekActivity();
+
+  /// Whether the player has not yet claimed their daily streak reward today.
+  bool get canClaimDailyReward {
+    final today = _dateKey(DateTime.now());
+    return _lastStreakClaimDate != today;
+  }
+
+  /// Day in 7-day reward cycle (1 to 7) for the currently active streak.
+  int get currentStreakDayInCycle {
+    if (_persistedStreakDays <= 0) return 1;
+    return ((_persistedStreakDays - 1) % 7) + 1;
+  }
+
+  /// Which day in the 7-day cycle the player will claim next.
+  int get nextStreakDayToClaim {
+    final today = _dateKey(DateTime.now());
+    final yesterday = _dateKey(DateTime.now().subtract(const Duration(days: 1)));
+    if (_lastStreakClaimDate == today) {
+      return currentStreakDayInCycle;
+    }
+    if (_streakUpdatedDate == yesterday || _lastStreakClaimDate == yesterday) {
+      return ((_persistedStreakDays) % 7) + 1;
+    }
+    return 1;
+  }
 
   /// Returns today's quests with current progress filled in.
   List<DailyQuest> get todayQuestsWithProgress {
@@ -100,6 +127,7 @@ class PlayerDataService extends ChangeNotifier {
     totalShares          = prefs.getInt('totalShares') ?? 0;
     _persistedStreakDays = prefs.getInt('persistedStreakDays') ?? 0;
     _streakUpdatedDate   = prefs.getString('streakUpdatedDate') ?? '';
+    _lastStreakClaimDate = prefs.getString('lastStreakClaimDate') ?? '';
 
     // Achievements
     final achList = prefs.getStringList('achievements') ?? [];
@@ -360,6 +388,87 @@ class PlayerDataService extends ChangeNotifier {
     );
   }
 
+  /// Claim today's daily streak reward.
+  Future<DailyStreakClaimResult> claimDailyStreakReward() async {
+    _ensureTodayReset();
+    final today = _dateKey(DateTime.now());
+    final yesterday =
+        _dateKey(DateTime.now().subtract(const Duration(days: 1)));
+
+    if (_lastStreakClaimDate == today) {
+      return DailyStreakClaimResult(
+        alreadyClaimed: true,
+        dayInCycle: currentStreakDayInCycle,
+        streakDays: _persistedStreakDays,
+        totalRewardXP: 0,
+      );
+    }
+
+    if (_streakUpdatedDate == yesterday || _lastStreakClaimDate == yesterday) {
+      _persistedStreakDays++;
+    } else if (_streakUpdatedDate == today) {
+      // Gameplay session already bumped streak today
+      if (_persistedStreakDays <= 0) _persistedStreakDays = 1;
+    } else {
+      // Streak broken or brand new user
+      _persistedStreakDays = 1;
+    }
+
+    _lastStreakClaimDate = today;
+    _streakUpdatedDate = today;
+    _bonusAwardedToday = true;
+
+    final cycleDay = ((_persistedStreakDays - 1) % 7) + 1;
+    final baseXP = DailyStreakReward.xpForDay(cycleDay);
+
+    int milestoneBonus = 0;
+    String? milestoneName;
+    if (_persistedStreakDays == 14) {
+      milestoneBonus = 150;
+      milestoneName = '14-Day Streak Milestone';
+    } else if (_persistedStreakDays == 30) {
+      milestoneBonus = 300;
+      milestoneName = '30-Day Legend Milestone';
+    } else if (_persistedStreakDays == 60) {
+      milestoneBonus = 600;
+      milestoneName = '60-Day Titan Milestone';
+    } else if (_persistedStreakDays == 100) {
+      milestoneBonus = 1200;
+      milestoneName = '100-Day Centurion Milestone';
+    }
+
+    final totalEarned = baseXP + milestoneBonus;
+    totalXP += totalEarned;
+    todayXP += totalEarned;
+
+    // Streak achievements
+    if (_persistedStreakDays >= 3) unlockedAchievements.add('streak_3');
+    if (_persistedStreakDays >= 7) unlockedAchievements.add('streak_7');
+    if (_persistedStreakDays >= 14) unlockedAchievements.add('streak_14');
+    if (_persistedStreakDays >= 30) unlockedAchievements.add('streak_30');
+    if (_persistedStreakDays >= 60) unlockedAchievements.add('streak_60');
+    if (_persistedStreakDays >= 100) unlockedAchievements.add('streak_100');
+
+    await _save();
+    notifyListeners();
+
+    AnalyticsService.instance.updateUserProperties(
+      level: level,
+      totalXP: totalXP,
+      streakDays: _persistedStreakDays,
+    );
+
+    return DailyStreakClaimResult(
+      alreadyClaimed: false,
+      dayInCycle: cycleDay,
+      streakDays: _persistedStreakDays,
+      baseXP: baseXP,
+      milestoneBonus: milestoneBonus,
+      milestoneName: milestoneName,
+      totalRewardXP: totalEarned,
+    );
+  }
+
   /// Grant bonus XP outside a session (e.g. rewarded-ad 2× XP).
   Future<void> addBonusXP(int amount) async {
     if (amount <= 0) return;
@@ -432,6 +541,7 @@ class PlayerDataService extends ChangeNotifier {
     totalShares = 0;
     _persistedStreakDays = 0;
     _streakUpdatedDate = '';
+    _lastStreakClaimDate = '';
     _bonusAwardedToday = false;
     recentSessions = [];
     unlockedAchievements = {};
@@ -527,7 +637,7 @@ class PlayerDataService extends ChangeNotifier {
     if (_streakUpdatedDate.isEmpty) {
       // First-ever call: bootstrap from legacy recentSessions data.
       _persistedStreakDays = _computeStreak();
-    } else if (_streakUpdatedDate == yesterday) {
+    } else if (_streakUpdatedDate == yesterday || _lastStreakClaimDate == yesterday) {
       _persistedStreakDays++;
     } else {
       // Streak broken — reset to 1 for today.
@@ -548,6 +658,8 @@ class PlayerDataService extends ChangeNotifier {
   // Awards the daily streak bonus once per day; subsequent calls return 0.
   int _awardDailyBonus() {
     if (_bonusAwardedToday) return 0;
+    final today = _dateKey(DateTime.now());
+    if (_lastStreakClaimDate == today) return 0;
     final bonus = _dailyStreakBonus();
     if (bonus > 0) _bonusAwardedToday = true;
     return bonus;
@@ -633,6 +745,7 @@ class PlayerDataService extends ChangeNotifier {
     await prefs.setInt('totalShares', totalShares);
     await prefs.setInt('persistedStreakDays', _persistedStreakDays);
     await prefs.setString('streakUpdatedDate', _streakUpdatedDate);
+    await prefs.setString('lastStreakClaimDate', _lastStreakClaimDate);
     await prefs.setBool('sfxOn', sfxOn);
     await prefs.setBool('musicOn', musicOn);
     await prefs.setInt('dailyTimeLimit', dailyTimeLimitMins);
